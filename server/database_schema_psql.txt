@@ -1,0 +1,34 @@
+-- Create users table
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL
+);
+
+-- Create daily_logs table
+CREATE TABLE daily_logs (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  date DATE NOT NULL
+);
+
+-- Create emotions table
+CREATE TABLE emotions (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  is_positive BOOLEAN NOT NULL
+);
+
+-- Create daily_emotions table
+CREATE TABLE daily_emotions (
+  id SERIAL PRIMARY KEY,
+  daily_log_id INTEGER REFERENCES daily_logs(id),
+  emotion VARCHAR(255) NOT NULL,
+  emotion_type VARCHAR(10) NOT NULL
+);
+
+-- Create daily_needs table
+CREATE TABLE daily_needs (
+  id SERIAL PRIMARY KEY,
+  daily_log_id INTEGER REFERENCES daily_logs(id),
+  need VARCHAR(255) NOT NULL
+);
