@@ -1,0 +1,110 @@
+// styles/MoodClustering.css
+.container {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(to bottom right, #0f172a, #581c87, #0f172a);
+  overflow: hidden;
+}
+
+.mood-button {
+  position: absolute;
+  border-radius: 9999px;
+  backdrop-filter: blur(4px);
+  transition: transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+.mood-button:hover {
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.mood-button.dragging {
+  transform: translate(-50%, -50%) scale(1.05);
+  cursor: grabbing;
+  transition: none;
+}
+
+.mood-button.dragged {
+  z-index: 50;
+}
+
+.mood-text {
+  color: white;
+  font-weight: 500;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.selection-panel {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  border-radius: 0.75rem;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease-in-out;
+  opacity: 0;
+  transform: translateX(-50%) translateY(100%);
+}
+
+.selection-panel.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toggle-button {
+  position: absolute;
+  top: -2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  border-radius: 9999px;
+  padding: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.toggle-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.selection-content {
+  padding: 1rem;
+}
+
+.selection-text {
+  color: white;
+  font-size: 1.125rem;
+}
+
+.mood-highlight {
+  font-weight: 500;
+}
+
+.category-text {
+  font-size: 0.875rem;
+  opacity: 0.75;
+}
+
+@keyframes nope {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  25% { transform: translate(-50%, -50%) rotate(-20deg); }
+  75% { transform: translate(-50%, -50%) rotate(20deg); }
+  100% { transform: translate(-50%, -50%) rotate(0deg); }
+}
+
+.nope {
+  animation: nope 0.3s ease-in-out;
+}
