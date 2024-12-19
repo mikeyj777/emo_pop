@@ -1,4 +1,3 @@
-// MainController.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -12,9 +11,11 @@ const MainController = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
   
+  const [stages, setStages] = useState([]);
   const [currentStage, setCurrentStage] = useState(0);
   const [currentCategory, setCurrentCategory] = useState(0);
   const [currentData, setCurrentData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selections, setSelections] = useState({
     positive: [],
     negative: [],
@@ -22,23 +23,35 @@ const MainController = () => {
   });
   const [categoryTitle, setCategoryTitle] = useState('');
 
-  const stages = [
-    { 
-      file: 'data/feelings_positive.csv',
-      type: 'positive',
-      title: 'Positive Feelings'
-    },
-    { 
-      file: 'data/feelings_negative.csv',
-      type: 'negative',
-      title: 'Challenging Feelings'
-    },
-    { 
-      file: 'data/needs.csv',
-      type: 'needs',
-      title: 'Current Needs'
-    }
-  ];
+  // Initialize stages once when component mounts
+  useEffect(() => {
+    const initializeStages = async () => {
+      const initialStages = [
+        { 
+          file: 'data/feelings_positive.csv',
+          type: 'positive',
+          title: 'Positive Feelings',
+          categories: []
+        },
+        { 
+          file: 'data/feelings_negative.csv',
+          type: 'negative',
+          title: 'Challenging Feelings',
+          categories: []
+        },
+        { 
+          file: 'data/needs.csv',
+          type: 'needs',
+          title: 'Current Needs',
+          categories: []
+        }
+      ];
+      setStages(initialStages);
+      setIsLoading(false);
+    };
+
+    initializeStages();
+  }, []);
 
   const parseCSV = (text) => {
     console.info('MainController: Starting CSV parsing');
@@ -72,7 +85,7 @@ const MainController = () => {
     
     if (rows.length < 2) {
       console.error('MainController: CSV file has insufficient data');
-      return [];
+      return { categories: [], formattedData: [] };
     }
 
     const categories = rows[0];
@@ -94,7 +107,11 @@ const MainController = () => {
   };
 
   const loadCurrentStageData = async () => {
+    if (stages.length === 0) return;
+    
+    setIsLoading(true);
     console.info(`MainController: Loading data for stage ${currentStage}, category ${currentCategory}`);
+    
     try {
       const fileUrl = `${process.env.PUBLIC_URL}/${stages[currentStage].file}`;
       console.info('MainController: Fetching file from:', fileUrl);
@@ -105,24 +122,35 @@ const MainController = () => {
       const rows = parseCSV(text);
       const { categories, formattedData } = processCSVData(rows);
       
-      // Update the current stage with the categories from the CSV
-      stages[currentStage].categories = categories;
+      // Update stages with new categories
+      setStages(prevStages => {
+        const updatedStages = [...prevStages];
+        updatedStages[currentStage] = {
+          ...updatedStages[currentStage],
+          categories
+        };
+        return updatedStages;
+      });
       
       setCurrentData(formattedData);
+      setCategoryTitle(categories[currentCategory]);
     } catch (error) {
       console.error('MainController: Error loading file:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // Load stage data when current stage or category changes
   useEffect(() => {
-    console.info(`MainController: Stage or category changed`, {
-      stage: currentStage,
-      category: currentCategory
-    });
-    loadCurrentStageData();
-  }, [currentStage, currentCategory]);
+    if (!isLoading && stages.length > 0) {
+      loadCurrentStageData();
+    }
+  }, [currentStage, currentCategory, stages.length]);
 
   const handleSelectionComplete = async (selectedItems) => {
+    if (!stages[currentStage]?.categories) return;
+
     const stageType = stages[currentStage].type;
     const categoryName = stages[currentStage].categories[currentCategory];
     
@@ -132,13 +160,10 @@ const MainController = () => {
       selectedItems
     });
 
-    setSelections(prev => {
-      const currentStageSelections = prev[stageType] || [];
-      return {
-        ...prev,
-        [stageType]: [...currentStageSelections, ...selectedItems]
-      };
-    });
+    setSelections(prev => ({
+      ...prev,
+      [stageType]: [...(prev[stageType] || []), ...selectedItems]
+    }));
 
     try {
       const payload = {
@@ -152,14 +177,12 @@ const MainController = () => {
       await axios.post(`${API_BASE_URL}/api/selections`, payload);
 
       // Move to next category or stage
-      if (currentCategory < stages[currentStage].categories.length - 1) {
+      if (currentCategory < (stages[currentStage]?.categories?.length || 0) - 1) {
         setCurrentCategory(prev => prev + 1);
-        setCategoryTitle(stages[currentStage].categories[currentCategory]);
       } else {
         if (currentStage < stages.length - 1) {
           setCurrentStage(prev => prev + 1);
           setCurrentCategory(0);
-          setCategoryTitle(stages[currentStage].categories[currentCategory]);
         } else {
           navigate(`/results/${userId}`);
         }
@@ -169,16 +192,21 @@ const MainController = () => {
     }
   };
 
+  if (isLoading || !stages[currentStage]) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="container">
       <StageHeader 
-        currentStage={`${stages[currentStage].title} - ${stages[currentStage].type}`}
+        currentStage={stages[currentStage]?.title || 'Loading...'}
         currentCategory={categoryTitle || 'Loading...'}
       />
       
       <EnhancedClusteringMoods
         items={currentData}
         onSelectionComplete={handleSelectionComplete}
+        currentCategory={categoryTitle || 'Loading...'}
       />
     </div>
   );
