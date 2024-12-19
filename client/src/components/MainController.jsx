@@ -2,129 +2,183 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import Papa from 'papaparse';
 import EnhancedClusteringMoods from './EnhancedClusteringMoods';
 import StageHeader from './StageHeader';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 const MainController = () => {
+  console.info('MainController: Component initialized');
   const { userId } = useParams();
   const navigate = useNavigate();
   
   const [currentStage, setCurrentStage] = useState(0);
+  const [currentCategory, setCurrentCategory] = useState(0);
   const [currentData, setCurrentData] = useState([]);
   const [selections, setSelections] = useState({
     positive: [],
     negative: [],
     needs: []
   });
+  const [categoryTitle, setCategoryTitle] = useState('');
 
   const stages = [
     { 
-      file: 'data/feelings_positive.csv',  // Updated path
-      type: 'positive',  // Changed to lowercase for consistency
-      title: 'Positive Feelings',
-      categories: ['Elation and Excitement', 'Peaceful and Relaxed', 'Gratitude and Fulfillment', 
-                  'Motivation and Determination', 'Contentment and Satisfaction']
+      file: 'data/feelings_positive.csv',
+      type: 'positive',
+      title: 'Positive Feelings'
     },
     { 
-      file: 'data/feelings_negative.csv',  // Updated path
-      type: 'negative',  // Changed to lowercase for consistency
-      title: 'Challenging Feelings',
-      categories: ['Anxiety and Worry', 'Depression and Despair', 'Anger and Frustration', 
-                  'Fear and Insecurity', 'Exhaustion and Lethargy']
+      file: 'data/feelings_negative.csv',
+      type: 'negative',
+      title: 'Challenging Feelings'
     },
     { 
-      file: 'data/needs.csv',  // Updated path
+      file: 'data/needs.csv',
       type: 'needs',
-      title: 'Current Needs',
-      categories: ['Safety', 'Spiritual', 'Recreation', 'Physical', 'Connection', 
-                  'Autonomy', 'Integrity', 'Development']
+      title: 'Current Needs'
     }
   ];
 
-  useEffect(() => {
-    loadCurrentStageData();
-  }, [currentStage]);
+  const parseCSV = (text) => {
+    console.info('MainController: Starting CSV parsing');
+    
+    const rows = text.split(/\r?\n/).map(row => {
+      const cells = [];
+      let currentCell = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < row.length; i++) {
+        const char = row[i];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          cells.push(currentCell.trim().replace(/^"|"$/g, ''));
+          currentCell = '';
+        } else {
+          currentCell += char;
+        }
+      }
+      
+      cells.push(currentCell.trim().replace(/^"|"$/g, ''));
+      return cells;
+    }).filter(row => row.some(cell => cell.length > 0));
+
+    return rows;
+  };
+
+  const processCSVData = (rows) => {
+    console.info('MainController: Processing CSV data');
+    
+    if (rows.length < 2) {
+      console.error('MainController: CSV file has insufficient data');
+      return [];
+    }
+
+    const categories = rows[0];
+    console.info('MainController: Categories from CSV:', categories);
+
+    // Process data for current category only
+    const currentCategoryName = categories[currentCategory];
+    const items = rows.slice(1)
+      .map(row => row[currentCategory])
+      .filter(item => item && item.trim());
+
+    return {
+      categories,
+      formattedData: [{
+        category: currentCategoryName,
+        items
+      }]
+    };
+  };
 
   const loadCurrentStageData = async () => {
+    console.info(`MainController: Loading data for stage ${currentStage}, category ${currentCategory}`);
     try {
-      // Instead of window.fs.readFile, use fetch with the public URL
-      const response = await fetch(`${process.env.PUBLIC_URL}/${stages[currentStage].file}`);
+      const fileUrl = `${process.env.PUBLIC_URL}/${stages[currentStage].file}`;
+      console.info('MainController: Fetching file from:', fileUrl);
+      
+      const response = await fetch(fileUrl);
       const text = await response.text();
       
-      Papa.parse(text, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          // Rest of your parsing logic remains the same
-          const processedData = results.data.reduce((acc, item) => {
-            const category = item.category;
-            const value = item.feeling || item.need;
-            
-            if (category && value) {
-              if (!acc[category]) {
-                acc[category] = [];
-              }
-              acc[category].push(value);
-            }
-            return acc;
-          }, {});
-          
-          const formattedData = Object.entries(processedData).map(([category, items]) => ({
-            category,
-            items
-          }));
-          
-          setCurrentData(formattedData);
-        },
-        error: (error) => {
-          console.error('Error parsing CSV:', error);
-        }
-      });
+      const rows = parseCSV(text);
+      const { categories, formattedData } = processCSVData(rows);
+      
+      // Update the current stage with the categories from the CSV
+      stages[currentStage].categories = categories;
+      
+      setCurrentData(formattedData);
     } catch (error) {
-      console.error('Error loading file:', error);
+      console.error('MainController: Error loading file:', error);
     }
   };
 
+  useEffect(() => {
+    console.info(`MainController: Stage or category changed`, {
+      stage: currentStage,
+      category: currentCategory
+    });
+    loadCurrentStageData();
+  }, [currentStage, currentCategory]);
+
   const handleSelectionComplete = async (selectedItems) => {
     const stageType = stages[currentStage].type;
-    setSelections(prev => ({
-      ...prev,
-      [stageType]: selectedItems
-    }));
+    const categoryName = stages[currentStage].categories[currentCategory];
+    
+    console.info('MainController: Selection complete', {
+      stageType,
+      category: categoryName,
+      selectedItems
+    });
+
+    setSelections(prev => {
+      const currentStageSelections = prev[stageType] || [];
+      return {
+        ...prev,
+        [stageType]: [...currentStageSelections, ...selectedItems]
+      };
+    });
 
     try {
-      await axios.post(`${API_BASE_URL}/api/selections`, {
+      const payload = {
         userId,
         type: stageType,
+        category: categoryName,
         selections: selectedItems,
         timestamp: new Date().toISOString()
-      });
+      };
+      
+      await axios.post(`${API_BASE_URL}/api/selections`, payload);
 
-      if (currentStage < stages.length - 1) {
-        setCurrentStage(prev => prev + 1);
+      // Move to next category or stage
+      if (currentCategory < stages[currentStage].categories.length - 1) {
+        setCurrentCategory(prev => prev + 1);
+        setCategoryTitle(stages[currentStage].categories[currentCategory]);
       } else {
-        navigate(`/results/${userId}`);
+        if (currentStage < stages.length - 1) {
+          setCurrentStage(prev => prev + 1);
+          setCurrentCategory(0);
+          setCategoryTitle(stages[currentStage].categories[currentCategory]);
+        } else {
+          navigate(`/results/${userId}`);
+        }
       }
     } catch (error) {
-      console.error('Error saving selections:', error);
+      console.error('MainController: Error saving selections:', error);
     }
   };
 
   return (
     <div className="container">
       <StageHeader 
-        stages={stages.map(stage => stage.title)}
-        categories={stages[currentStage].categories}
-        currentStage={currentStage}
+        currentStage={`${stages[currentStage].title} - ${stages[currentStage].type}`}
+        currentCategory={categoryTitle || 'Loading...'}
       />
       
       <EnhancedClusteringMoods
         items={currentData}
         onSelectionComplete={handleSelectionComplete}
-        categories={stages[currentStage].categories}
       />
     </div>
   );

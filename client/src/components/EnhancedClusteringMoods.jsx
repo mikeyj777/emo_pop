@@ -3,10 +3,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import MoodButton from './ui/MoodButton';
 import SelectionPanel from './ui/SelectionPanel';
 
-const EnhancedClusteringMoods = ({ items, onSelectionComplete, categories }) => {
+const EnhancedClusteringMoods = ({ items, onSelectionComplete, currentCategory }) => {
   const [moods, setMoods] = useState([]);
   const [selectedMood, setSelectedMood] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState(null);
   const [draggedMood, setDraggedMood] = useState(null);
   const [dragStart, setDragStart] = useState(null);
   const [dragCurrentPos, setDragCurrentPos] = useState(null);
@@ -16,15 +15,13 @@ const EnhancedClusteringMoods = ({ items, onSelectionComplete, categories }) => 
   // Initialize available items when items prop changes
   useEffect(() => {
     if (items && items.length > 0) {
-      const allItems = items.flatMap(category => 
-        category.items.map(item => ({
-          text: item,
-          category: category.category
-        }))
-      );
+      const allItems = items[0].items.map(item => ({
+        text: item,
+        category: currentCategory
+      }));
       setAvailableItems(allItems);
     }
-  }, [items]);
+  }, [items, currentCategory]);
 
   const generateMoodPhysics = () => {
     if (availableItems.length === 0) return null;
@@ -46,7 +43,7 @@ const EnhancedClusteringMoods = ({ items, onSelectionComplete, categories }) => 
       vy: (Math.random() - 0.5) * 1.5,
       size,
       createdAt: Date.now(),
-      category: selectedItem.category,
+      category: currentCategory,
       text: selectedItem.text
     };
   };
@@ -93,15 +90,11 @@ const EnhancedClusteringMoods = ({ items, onSelectionComplete, categories }) => 
       };
     }
     
-    if (mood1.category === mood2.category && distance < 300) {
-      const force = 0.3 * (1 / Math.pow(distance, 2));
-      return {
-        fx: (dx / distance) * Math.min(force, 0.1),
-        fy: (dy / distance) * Math.min(force, 0.1)
-      };
-    }
-    
-    return { fx: 0, fy: 0 };
+    const force = 0.3 * (1 / Math.pow(distance, 2));
+    return {
+      fx: (dx / distance) * Math.min(force, 0.1),
+      fy: (dy / distance) * Math.min(force, 0.1)
+    };
   };
 
   const updatePositions = useCallback(() => {
@@ -196,7 +189,6 @@ const EnhancedClusteringMoods = ({ items, onSelectionComplete, categories }) => 
 
     if (distance < 5) {
       setSelectedMood(draggedMood);
-      setSelectedCategory(draggedMood.category);
       setIsSelectionVisible(true);
       setMoods(prev => prev.filter(m => m.id !== draggedMood.id));
     } else {
@@ -269,7 +261,6 @@ const EnhancedClusteringMoods = ({ items, onSelectionComplete, categories }) => 
         <SelectionPanel
           isVisible={isSelectionVisible}
           selectedMood={selectedMood}
-          selectedCategory={selectedCategory}
           onToggleVisibility={() => setIsSelectionVisible(!isSelectionVisible)}
           onComplete={onSelectionComplete}
         />
