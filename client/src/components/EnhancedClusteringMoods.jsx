@@ -4,7 +4,7 @@ import MoodButton from './ui/MoodButton';
 import SelectionPanel from './ui/SelectionPanel';
 import { moodData } from '../utils/moodData';
 
-const EnhancedClusteringMoods = () => {
+const EnhancedClusteringMoods = ({ items, onSelectionComplete }) => {
   const [moods, setMoods] = useState([]);
   const [selectedMood, setSelectedMood] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -223,7 +223,7 @@ const EnhancedClusteringMoods = () => {
   }, [updatePositions]);
 
   return (
-    <div className="container">
+    <div className="mood-container">
       {moods.map((mood) => (
         <MoodButton
           key={mood.id}
