@@ -22,22 +22,22 @@ const MainController = () => {
 
   const stages = [
     { 
-      file: '../data/feelings_positive.csv', 
-      type: 'Positive',
+      file: 'data/feelings_positive.csv',  // Updated path
+      type: 'positive',  // Changed to lowercase for consistency
       title: 'Positive Feelings',
       categories: ['Elation and Excitement', 'Peaceful and Relaxed', 'Gratitude and Fulfillment', 
                   'Motivation and Determination', 'Contentment and Satisfaction']
     },
     { 
-      file: '../data/feelings_negative.csv', 
-      type: 'Negative',
+      file: 'data/feelings_negative.csv',  // Updated path
+      type: 'negative',  // Changed to lowercase for consistency
       title: 'Challenging Feelings',
       categories: ['Anxiety and Worry', 'Depression and Despair', 'Anger and Frustration', 
                   'Fear and Insecurity', 'Exhaustion and Lethargy']
     },
     { 
-      file: '../data/needs.csv', 
-      type: 'Needs',
+      file: 'data/needs.csv',  // Updated path
+      type: 'needs',
       title: 'Current Needs',
       categories: ['Safety', 'Spiritual', 'Recreation', 'Physical', 'Connection', 
                   'Autonomy', 'Integrity', 'Development']
@@ -50,11 +50,34 @@ const MainController = () => {
 
   const loadCurrentStageData = async () => {
     try {
-      const response = await window.fs.readFile(stages[currentStage].file, { encoding: 'utf8' });
-      Papa.parse(response, {
+      // Instead of window.fs.readFile, use fetch with the public URL
+      const response = await fetch(`${process.env.PUBLIC_URL}/${stages[currentStage].file}`);
+      const text = await response.text();
+      
+      Papa.parse(text, {
         header: true,
+        skipEmptyLines: true,
         complete: (results) => {
-          setCurrentData(results.data);
+          // Rest of your parsing logic remains the same
+          const processedData = results.data.reduce((acc, item) => {
+            const category = item.category;
+            const value = item.feeling || item.need;
+            
+            if (category && value) {
+              if (!acc[category]) {
+                acc[category] = [];
+              }
+              acc[category].push(value);
+            }
+            return acc;
+          }, {});
+          
+          const formattedData = Object.entries(processedData).map(([category, items]) => ({
+            category,
+            items
+          }));
+          
+          setCurrentData(formattedData);
         },
         error: (error) => {
           console.error('Error parsing CSV:', error);
@@ -90,20 +113,18 @@ const MainController = () => {
     }
   };
 
-  // Pass stage titles and categories to StageHeader
-  const stageTitles = stages.map(stage => stage.title);
-  const currentCategories = stages[currentStage].categories;
-
   return (
     <div className="container">
       <StageHeader 
-        stages={stageTitles}
-        categories={currentCategories}
+        stages={stages.map(stage => stage.title)}
+        categories={stages[currentStage].categories}
+        currentStage={currentStage}
       />
       
       <EnhancedClusteringMoods
         items={currentData}
         onSelectionComplete={handleSelectionComplete}
+        categories={stages[currentStage].categories}
       />
     </div>
   );

@@ -2,9 +2,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import MoodButton from './ui/MoodButton';
 import SelectionPanel from './ui/SelectionPanel';
-import { moodData } from '../utils/moodData';
 
-const EnhancedClusteringMoods = ({ items, onSelectionComplete }) => {
+const EnhancedClusteringMoods = ({ items, onSelectionComplete, categories }) => {
   const [moods, setMoods] = useState([]);
   const [selectedMood, setSelectedMood] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -12,12 +11,31 @@ const EnhancedClusteringMoods = ({ items, onSelectionComplete }) => {
   const [dragStart, setDragStart] = useState(null);
   const [dragCurrentPos, setDragCurrentPos] = useState(null);
   const [isSelectionVisible, setIsSelectionVisible] = useState(false);
+  const [availableItems, setAvailableItems] = useState([]);
+
+  // Initialize available items when items prop changes
+  useEffect(() => {
+    if (items && items.length > 0) {
+      const allItems = items.flatMap(category => 
+        category.items.map(item => ({
+          text: item,
+          category: category.category
+        }))
+      );
+      setAvailableItems(allItems);
+    }
+  }, [items]);
 
   const generateMoodPhysics = () => {
-    const category = moodData.categories[Math.floor(Math.random() * moodData.categories.length)];
-    const moodType = category.moods[Math.floor(Math.random() * category.moods.length)];
-    const size = Math.random() * 20 + 80;
+    if (availableItems.length === 0) return null;
     
+    const randomIndex = Math.floor(Math.random() * availableItems.length);
+    const selectedItem = availableItems[randomIndex];
+    
+    // Remove the selected item from available items
+    setAvailableItems(prev => prev.filter((_, index) => index !== randomIndex));
+    
+    const size = Math.random() * 20 + 80;
     let position = findNonOverlappingPosition(size);
     
     return {
@@ -28,8 +46,8 @@ const EnhancedClusteringMoods = ({ items, onSelectionComplete }) => {
       vy: (Math.random() - 0.5) * 1.5,
       size,
       createdAt: Date.now(),
-      category: category.name,
-      ...moodType
+      category: selectedItem.category,
+      text: selectedItem.text
     };
   };
 
@@ -158,6 +176,8 @@ const EnhancedClusteringMoods = ({ items, onSelectionComplete }) => {
           moodElement.classList.add('nope');
           setTimeout(() => {
             setMoods(prev => prev.filter(m => m.id !== draggedMood.id));
+            // Add the item back to available items when removed
+            setAvailableItems(prev => [...prev, { text: draggedMood.text, category: draggedMood.category }]);
             setDraggedMood(null);
             setDragStart(null);
             setDragCurrentPos(null);
@@ -201,19 +221,30 @@ const EnhancedClusteringMoods = ({ items, onSelectionComplete }) => {
 
   useEffect(() => {
     const generationInterval = setInterval(() => {
-      if (moods.length < 5) {
-        setMoods(prev => [...prev, generateMoodPhysics()]);
+      if (moods.length < 5 && availableItems.length > 0) {
+        const newMood = generateMoodPhysics();
+        if (newMood) {
+          setMoods(prev => [...prev, newMood]);
+        }
       }
     }, 2000);
 
     return () => clearInterval(generationInterval);
-  }, [moods.length]);
+  }, [moods.length, availableItems.length]);
 
   useEffect(() => {
     const animationInterval = setInterval(updatePositions, 50);
     const cleanupInterval = setInterval(() => {
       const now = Date.now();
-      setMoods(prev => prev.filter(mood => (now - mood.createdAt) < 15000));
+      setMoods(prev => {
+        const expiredMoods = prev.filter(mood => (now - mood.createdAt) >= 15000);
+        // Add expired moods back to available items
+        setAvailableItems(prevItems => [
+          ...prevItems,
+          ...expiredMoods.map(mood => ({ text: mood.text, category: mood.category }))
+        ]);
+        return prev.filter(mood => (now - mood.createdAt) < 15000);
+      });
     }, 1000);
 
     return () => {
@@ -240,6 +271,7 @@ const EnhancedClusteringMoods = ({ items, onSelectionComplete }) => {
           selectedMood={selectedMood}
           selectedCategory={selectedCategory}
           onToggleVisibility={() => setIsSelectionVisible(!isSelectionVisible)}
+          onComplete={onSelectionComplete}
         />
       )}
     </div>
