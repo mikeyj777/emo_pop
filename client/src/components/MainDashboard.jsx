@@ -211,6 +211,10 @@ const MainDashboard = () => {
           </div>
         </div>
       </div>
+      
+      <button className="journey-button">
+        Click here to Start your Journey
+      </button>
 
       {/* Legend */}
       <div className="chart-legend">

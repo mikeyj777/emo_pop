@@ -85,7 +85,7 @@ const CircleProgress = ({ value, color, label }) => {
           </text>
           <text 
             x="60" 
-            y="75" 
+            y="110" 
             className="enhanced-circle-label"
           >
             {label}
