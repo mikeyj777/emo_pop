@@ -69,6 +69,7 @@ def create_emotion(user_id):
         return jsonify({"error": "Internal server error"}), 500
 
 def load_emotions():
+    logging.info("Loading emotions...")
     try:
         conn = get_db_connection()
         cur = conn.cursor()

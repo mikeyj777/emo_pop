@@ -28,10 +28,12 @@ def user_route():
 
 @app.route('/api/load-emotions', methods=['GET'])
 def load_emotions_route():
+    logging.debug('getting emotions from app py')
     return load_emotions() 
 
 @app.route('/api/load-needs', methods=['GET'])
 def load_needs_route():
+    logging.debug('getting needs from app py')
     return load_needs() 
 
 

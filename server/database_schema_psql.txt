@@ -11,21 +11,6 @@ CREATE TABLE daily_logs (
   date DATE NOT NULL
 );
 
--- Create emotions table
-CREATE TABLE emotions (
-  id SERIAL PRIMARY KEY,
-  header VARCHAR(255) NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  is_positive BOOLEAN NOT NULL
-);
-
--- Create needs table
-CREATE TABLE needs (
-  id SERIAL PRIMARY KEY,
-  header VARCHAR(255) NOT NULL,
-  name VARCHAR(255) NOT NULL
-);
-
 -- Create daily_emotions table
 CREATE TABLE daily_emotions (
   id SERIAL PRIMARY KEY,
@@ -39,4 +24,19 @@ CREATE TABLE daily_needs (
   id SERIAL PRIMARY KEY,
   daily_log_id INTEGER REFERENCES daily_logs(id),
   need VARCHAR(255) NOT NULL
+);
+
+-- Create emotions table
+CREATE TABLE emotions (
+  id SERIAL PRIMARY KEY,
+  header VARCHAR(255) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  is_positive BOOLEAN NOT NULL
+);
+
+-- Create needs table
+CREATE TABLE needs (
+  id SERIAL PRIMARY KEY,
+  header VARCHAR(255) NOT NULL,
+  name VARCHAR(255) NOT NULL
 );

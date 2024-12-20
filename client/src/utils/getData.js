@@ -19,12 +19,14 @@ CREATE TABLE
 
 */
 
-// api.js or similar file
-const API_BASE_URL = process.env.API_URL;
 
-export const loadEmotions = async () => {
+export const loadEmotions = async (apiUrl) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/load-emotions`);
+        console.info('loading emotions...');
+        console.info("logging in. url is " + apiUrl);
+        console.info("full url as interpreted by react is " + `${apiUrl}/api/load-emotions`);
+      
+        const response = await fetch(`${apiUrl}/api/load-emotions`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -36,9 +38,9 @@ export const loadEmotions = async () => {
     }
 };
 
-export const loadNeeds = async () => {
+export const loadNeeds = async (apiUrl) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/load-needs`);
+        const response = await fetch(`${apiUrl}/api/load-needs`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }

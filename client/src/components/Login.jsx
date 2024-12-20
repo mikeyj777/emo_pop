@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL;
-
 function Login() {
   const [name, setName] = useState('');
   const navigate = useNavigate();
@@ -19,6 +17,7 @@ function Login() {
       console.info("full url as interpreted by react is " + `${API_BASE_URL}/api/users`);
       const res = await axios.post(`${API_BASE_URL}/api/users`, { name: trimmedName });
       const userId = res.data.userId;
+      console.info("retrieved user id " + userId);
       localStorage.setItem('userId', userId);
       navigate(`/controller/${userId}`);
     } catch (err) {

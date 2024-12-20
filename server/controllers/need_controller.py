@@ -79,6 +79,7 @@ def create_need(user_id):
         return jsonify({"error": "Internal server error"}), 500
 
 def load_needs():
+    logging.info("Loading needs...")
     try:
         conn = get_db_connection()
         cur = conn.cursor()

@@ -26,8 +26,8 @@ const MainController = () => {
     const fetchData = async () => {
         try {
             const [emotionsData, needsData] = await Promise.all([
-                loadEmotions(),
-                loadNeeds()
+                loadEmotions(API_BASE_URL),
+                loadNeeds(API_BASE_URL)
             ]);
             setEmotions(emotionsData);
             setNeeds(needsData);
@@ -37,9 +37,15 @@ const MainController = () => {
     };
 
     fetchData();
-}, []);
+  }, []);
 
-if (error) return <div>Error: {error}</div>;
+  if (error) return <div>Error: {error}</div>;
+
+  useEffect(() => {
+    if (emotions.length == 0 || needs.length == 0) return 
+    console.info("emotions:", emotions);
+    console.info("needs:", needs);
+  }, [emotions, needs]);
 
   
 
@@ -51,8 +57,7 @@ if (error) return <div>Error: {error}</div>;
 
   return  (
     <div className="main-controller">
-      <StageHeader />
-      <EnhancedClusteringMoods />
+      Test
     </div>
   )
 
