@@ -128,7 +128,6 @@ const MainController = () => {
         // Add selected items to cumulative array
         const newSelected = processedBubbles.filter(item => item.wasSelected);
         setSelectedItems(prev => [...prev, ...newSelected]);
-        console.log("in handleBubblesFate.  newSelected: ", newSelected);
         
         // Update remaining count and check for completion
         setRemainingItems(remaining => {
@@ -141,7 +140,6 @@ const MainController = () => {
             
             return newRemaining;
         });
-        console.log("remaining: ", remainingItems);
     };
 
     if (error) return <div>Error: {error}</div>;
