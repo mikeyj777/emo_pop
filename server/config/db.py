@@ -14,7 +14,7 @@ def get_db_connection():
         pwd = os.environ['DB_PASSWORD']
         conn = psycopg2.connect(
             host="localhost",
-            database="postgres",
+            database="emopop",
             user="postgres",
             password=pwd,
             port="5432"
@@ -24,7 +24,7 @@ def get_db_connection():
         from data.pwds import Pwds
         conn = psycopg2.connect(
             host="localhost",
-            database="postgres",
+            database="emopop",
             user="postgres",
             password=Pwds.pg_pwd,
             port="5432"

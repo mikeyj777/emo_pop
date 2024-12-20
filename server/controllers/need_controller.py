@@ -77,3 +77,16 @@ def create_need(user_id):
     except Exception as e:
         print("Error creating needs:", str(e))
         return jsonify({"error": "Internal server error"}), 500
+
+def load_needs():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM needs")
+        needs = cur.fetchall()
+        cur.close()
+        conn.close()
+        return jsonify(needs)
+    except Exception as e:
+        print("Error loading needs:", str(e))
+        return jsonify({"error": "Internal server error"}), 500

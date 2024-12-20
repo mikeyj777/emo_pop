@@ -67,3 +67,16 @@ def create_emotion(user_id):
     except Exception as e:
         print("Error creating emotions:", str(e))
         return jsonify({"error": "Internal server error"}), 500
+
+def load_emotions():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM emotions")
+        emotions = cur.fetchall()
+        cur.close()
+        conn.close()
+        return jsonify(emotions)
+    except Exception as e:
+        print("Error loading emotions:", str(e))
+        return jsonify({"error": "Internal server error"}), 500

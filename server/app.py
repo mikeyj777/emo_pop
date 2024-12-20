@@ -1,7 +1,7 @@
 from flask import Flask, jsonify
 from controllers.user_controller import get_user
-from controllers.emotion_controller import get_emotions, create_emotion
-from controllers.need_controller import get_needs, create_need
+from controllers.emotion_controller import get_emotions, create_emotion, load_emotions
+from controllers.need_controller import get_needs, create_need, load_needs
 from flask_cors import CORS
 
 from controllers.data_controller import check_existing_data
@@ -25,6 +25,15 @@ CORS(app, resources={
 def user_route():
     logging.debug('getting user')
     return get_user()
+
+@app.route('/api/load-emotions', methods=['GET'])
+def load_emotions_route():
+    return load_emotions() 
+
+@app.route('/api/load-needs', methods=['GET'])
+def load_needs_route():
+    return load_needs() 
+
 
 @app.route('/api/emotions/<int:user_id>', methods=['GET'])
 def get_emotions_route(user_id):
