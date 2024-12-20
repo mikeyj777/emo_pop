@@ -50,6 +50,7 @@ export const loadNeeds = async (apiUrl) => {
 
 export const storeEmotions = async (apiUrl, userId, emotions, type) => {
     try {
+        console.info("storing emotions....  ", emotions, " of type ", type);
         const response = await fetch(`${apiUrl}/api/emotions/${userId}`, {
             method: 'POST',
             headers: {
@@ -74,6 +75,7 @@ export const storeEmotions = async (apiUrl, userId, emotions, type) => {
 
 export const storeNeeds = async (apiUrl, userId, needs) => {
     try {
+        console.info("storing needs....  ", needs);
         const response = await fetch(`${apiUrl}/api/needs/${userId}`, {
             method: 'POST',
             headers: {

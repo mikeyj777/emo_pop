@@ -41,7 +41,7 @@ def get_needs(user_id):
     except Exception as e:
         return jsonify({"error": "Internal server error"}), 500
 
-def log_need(user_id):
+def log_needs(user_id):
     data = request.get_json()
     needs = data['needs']
     try:
@@ -53,22 +53,58 @@ def log_need(user_id):
         user_exists = cur.fetchone()
 
         if not user_exists:
-            # Handle the case when the user doesn't exist
-            # You can choose to create the user or return an error
-            # For example, you can return an error response
             return jsonify({"error": "User not found"}), 404
 
+        # Check if there's already a daily log for this user today
         cur.execute(
-            "INSERT INTO daily_logs (user_id, date) VALUES (%s, CURRENT_DATE) RETURNING id",
+            """
+            SELECT id FROM daily_logs 
+            WHERE user_id = %s 
+            AND date = CURRENT_DATE
+            """,
             (user_id,)
         )
-        daily_log_id = cur.fetchone()[0]
-
-        for need in needs:
+        existing_log = cur.fetchone()
+        
+        if existing_log:
+            daily_log_id = existing_log[0]
+            # Check for existing needs
+            for need in needs:
+                cur.execute(
+                    """
+                    SELECT id FROM daily_needs 
+                    WHERE daily_log_id = %s 
+                    AND need = %s
+                    """,
+                    (daily_log_id, need)
+                )
+                if not cur.fetchone():  # Only insert if need doesn't exist
+                    cur.execute(
+                        """
+                        INSERT INTO daily_needs (daily_log_id, need) 
+                        VALUES (%s, %s)
+                        """,
+                        (daily_log_id, need)
+                    )
+                    logging.info(f"Need logged: {need}, daily log id: {daily_log_id}")
+        else:
+            # Create new daily log if none exists
             cur.execute(
-                "INSERT INTO daily_needs (daily_log_id, need) VALUES (%s, %s)",
-                (daily_log_id, need)
+                "INSERT INTO daily_logs (user_id, date) VALUES (%s, CURRENT_DATE) RETURNING id",
+                (user_id,)
             )
+            daily_log_id = cur.fetchone()[0]
+            
+            # Insert all needs since this is a new log
+            for need in needs:
+                cur.execute(
+                    """
+                    INSERT INTO daily_needs (daily_log_id, need) 
+                    VALUES (%s, %s)
+                    """,
+                    (daily_log_id, need)
+                )
+                logging.info(f"Need logged: {need}, daily log id: {daily_log_id}")
 
         conn.commit()
         cur.close()

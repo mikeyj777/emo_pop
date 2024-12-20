@@ -1,7 +1,7 @@
 from flask import Flask, jsonify
 from controllers.user_controller import get_user
-from controllers.emotion_controller import get_emotions, log_emotion, load_emotions
-from controllers.need_controller import get_needs, log_need, load_needs
+from controllers.emotion_controller import get_emotions, log_emotions, load_emotions
+from controllers.need_controller import get_needs, log_needs, load_needs
 from flask_cors import CORS
 
 from controllers.data_controller import check_existing_data
@@ -47,11 +47,11 @@ def get_needs_route(user_id):
 
 @app.route('/api/emotions/<int:user_id>', methods=['POST'])
 def log_emotion_route(user_id):
-    return log_emotion(user_id)
+    return log_emotions(user_id)
 
 @app.route('/api/needs/<int:user_id>', methods=['POST'])
 def log_need_route(user_id):
-    return log_need(user_id)
+    return log_needs(user_id)
 
 @app.route('/api/check-existing-data/<int:user_id>', methods=['GET'])
 def check_existing_data_route(user_id):

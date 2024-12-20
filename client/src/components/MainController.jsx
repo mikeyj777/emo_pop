@@ -9,15 +9,20 @@ const API_BASE_URL = process.env.REACT_APP_API_URL;
 const MainController = () => {
     const { userId } = useParams();
     const navigate = useNavigate();
+    
+    // Core state
     const [emotions, setEmotions] = useState([]);
     const [needs, setNeeds] = useState([]);
     const [error, setError] = useState(null);
+    
+    // Navigation and processing state
     const [currentCategory, setCurrentCategory] = useState('positive');
     const [currentHeaderIndex, setCurrentHeaderIndex] = useState(0);
     const [processedItems, setProcessedItems] = useState([]);
     const [currentItems, setCurrentItems] = useState(null);
     const [selectedItems, setSelectedItems] = useState([]);
     const [remainingItems, setRemainingItems] = useState(0);
+    const [isTransitioning, setIsTransitioning] = useState(false);
 
     // Load initial data
     useEffect(() => {
@@ -37,7 +42,7 @@ const MainController = () => {
         fetchData();
     }, []);
 
-    // Add new function to process and store selected items
+    // Process and store selected items
     const processAndStoreSelectedItems = async () => {
       try {
           // Group items by category
@@ -52,7 +57,7 @@ const MainController = () => {
           const needs = selectedItems
               .filter(item => item.category === 'needs' && item.wasSelected)
               .map(item => item.item);
-
+  
           // Store emotions if any exist
           if (emotionsPositive.length > 0) {
               await storeEmotions(API_BASE_URL, userId, emotionsPositive, 'positive');
@@ -61,16 +66,17 @@ const MainController = () => {
           if (emotionsNegative.length > 0) {
               await storeEmotions(API_BASE_URL, userId, emotionsNegative, 'negative');
           }
-
+  
           // Store needs if any exist
           if (needs.length > 0) {
               await storeNeeds(API_BASE_URL, userId, needs);
           }
-
+  
+          // Remove the setSelectedItems([]) from here since the useEffect will handle it
       } catch (error) {
-          setError(`Error storing data: ${error.message}`);
+          throw new Error(`Failed to store items: ${error.message}`);
       }
-  };
+    };
 
     // Process data when emotions or needs change, or when category changes
     useEffect(() => {
@@ -134,28 +140,32 @@ const MainController = () => {
     useEffect(() => {
         if (processedItems.length === 0) return;
         
-        // If we've shown all headers in this category, move to next category
         if (currentHeaderIndex >= processedItems.length) {
-            switch (currentCategory) {
-                case 'positive':
-                    setCurrentCategory('negative');
-                    setCurrentHeaderIndex(0);
-                    break;
-                case 'negative':
-                    setCurrentCategory('needs');
-                    setCurrentHeaderIndex(0);
-                    break;
-                case 'needs':
-                    // Process and store all selected items before navigating
-                    processAndStoreSelectedItems()
-                        .then(() => {
+            const handleCategoryTransition = async () => {
+                setIsTransitioning(true);
+                try {
+                    
+                    switch (currentCategory) {
+                        case 'positive':
+                            setCurrentCategory('negative');
+                            setCurrentHeaderIndex(0);
+                            break;
+                        case 'negative':
+                            setCurrentCategory('needs');
+                            setCurrentHeaderIndex(0);
+                            break;
+                        case 'needs':
                             navigate(`/summary/${userId}`);
-                        })
-                        .catch(error => {
-                            setError(`Error storing data: ${error.message}`);
-                        });
-                    break;
-            }
+                            break;
+                    }
+                } catch (error) {
+                    setError(`Error during category transition: ${error.message}`);
+                } finally {
+                    setIsTransitioning(false);
+                }
+            };
+
+            handleCategoryTransition();
             return;
         }
 
@@ -165,39 +175,46 @@ const MainController = () => {
         setRemainingItems(current.items.length);
     }, [currentHeaderIndex, processedItems, currentCategory, navigate, userId]);
 
+    useEffect(() => {
+      // Don't process if there are no selected items
+      if (selectedItems.length === 0) return;
+      
+      const processItems = async () => {
+          try {
+              await processAndStoreSelectedItems();
+          } catch (error) {
+              setError(`Error processing items: ${error.message}`);
+          }
+      };
+  
+      processItems();
+  }, [selectedItems]); // Dependency array with selectedItems
+
     // Handle completed bubbles
     const handleBubblesFate = (processedBubbles) => {
-      /* 
-        processedBubbles data structure:
-          const processedBubbles = completedItems.map(item => ({
-            item: item.text,
-            wasSelected,
-            category,
-            header,
-            isPositive: category === 'needs' ? null : category === 'positive'
-          }));
-      */
+      // Add selected items to cumulative array, replacing previous selections
+      const newSelected = processedBubbles.filter(item => item.wasSelected);
+      setSelectedItems(newSelected); // Replace instead of append
       
-      // Add selected items to cumulative array
-        const newSelected = processedBubbles.filter(item => item.wasSelected);
-        setSelectedItems(prev => [...prev, ...newSelected]);
-        
-        // Update remaining count and check for completion
-        setRemainingItems(remaining => {
-            const newRemaining = remaining - processedBubbles.length;
-            
-            // If we've processed all items, move to next header
-            if (newRemaining === 0) {
-                setCurrentHeaderIndex(prev => prev + 1);
-            }
-            
-            return newRemaining;
-        });
+      // Update remaining count and check for completion
+      setRemainingItems(remaining => {
+          const newRemaining = remaining - processedBubbles.length;
+          
+          // If we've processed all items, move to next header
+          if (newRemaining === 0) {
+              setCurrentHeaderIndex(prev => prev + 1);
+          }
+          
+          return newRemaining;
+      });
     };
 
-    if (error) return <div>Error: {error}</div>;
-    if (!emotions.length || !needs.length) return <div>Loading...</div>;
-    if (!currentItems) return <div>Processing...</div>;
+    // Loading and error states
+    if (error) return <div className="status-message error">Error: {error}</div>;
+    if (!emotions.length || !needs.length || isTransitioning) {
+        return <div className="status-message loading">Loading...</div>;
+    }
+    if (!currentItems) return <div className="status-message processing">Processing...</div>;
 
     // Get header text for display
     const getHeaderText = () => {
