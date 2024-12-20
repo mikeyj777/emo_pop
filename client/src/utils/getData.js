@@ -21,6 +21,7 @@ CREATE TABLE
 
 
 export const loadEmotions = async (apiUrl) => {
+    console.info('in loadEmotions');
     try {
         console.info('loading emotions...');
         console.info("logging in. url is " + apiUrl);
@@ -39,6 +40,7 @@ export const loadEmotions = async (apiUrl) => {
 };
 
 export const loadNeeds = async (apiUrl) => {
+    console.info('in loadNeeds');
     try {
         const response = await fetch(`${apiUrl}/api/load-needs`);
         if (!response.ok) {

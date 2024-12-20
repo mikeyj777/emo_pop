@@ -1,18 +1,18 @@
 import React from 'react';
 
-const StageHeader = ({ currentStage = '', currentCategory = '' }) => {
+const StageHeader = ({ currentCategory = '', currentHeader = '' }) => {
   return (
     <header className="stage-header">
       <div className="stage-header-content">
         <div className="stage-title-container">
           <h1 className="stage-title fade-in">
-            {currentStage}
+            {currentCategory}
           </h1>
         </div>
         
         <div className="category-title-container">
           <h2 className="category-title fade-in">
-            {currentCategory}
+            {currentHeader}
           </h2>
         </div>
       </div>

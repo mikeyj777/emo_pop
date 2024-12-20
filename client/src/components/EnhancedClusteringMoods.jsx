@@ -1,54 +1,33 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import MoodButton from './ui/MoodButton';
-import SelectionPanel from './ui/SelectionPanel';
 
-const MOOD_LIMIT = 5;
-const MOOD_GENERATION_INTERVAL = 2000;
-const MOOD_LIFETIME = 15000;
-const ANIMATION_INTERVAL = 50;
+const MOOD_GENERATION_INTERVAL = 2000;  // Time between new bubbles appearing
+const BUBBLE_LIFETIME = 5000;           // How long each bubble lives
+const FADE_DURATION = 1000;             // How long the fade animation takes
+const ANIMATION_INTERVAL = 50;          // Physics update interval
 
-const EnhancedClusteringMoods = ({ items, onSelectionComplete, currentCategory }) => {
-  const [moods, setMoods] = useState([]);
-  const [selectedMood, setSelectedMood] = useState(null);
-  const [draggedMood, setDraggedMood] = useState(null);
-  const [dragStart, setDragStart] = useState(null);
-  const [isSelectionVisible, setIsSelectionVisible] = useState(false);
+const EnhancedClusteringMoods = ({ items, category, header, onBubblesFate }) => {
+  const [activeItems, setActiveItems] = useState([]);
+  const [processingItems, setProcessingItems] = useState(new Set()); // Track items being processed
   const [availableItems, setAvailableItems] = useState([]);
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [dragStart, setDragStart] = useState(null);
 
-  // Reset state when category changes
+  // Initialize available items when props change
   useEffect(() => {
-    console.info("EnhancedClusteringMoods: Category change effect triggered", {
-      hasItems: !!items,
-      itemsLength: items?.length,
-      currentCategory,
-      itemsContent: items
-    });
-
     if (items && items.length > 0) {
-      console.info("EnhancedClusteringMoods: Processing new items", {
-        firstItemCategory: items[0].category,
-        itemCount: items[0].items.length,
-        sampleItems: items[0].items.slice(0, 3)
-      });
-      
-      const allItems = items[0].items.map(item => ({
-        text: item,
-        category: currentCategory
-      }));
-      setAvailableItems(allItems);
-      setMoods([]);
-      setSelectedMood(null);
-      setDraggedMood(null);
-      setDragStart(null);
-      setIsSelectionVisible(false);
+      setAvailableItems([...items]);
+      setActiveItems([]);
+      setProcessingItems(new Set());
     }
-  }, [items, currentCategory]);
+  }, [items]);
 
-  const generateMoodPhysics = useCallback(() => {
+  // Generate new bubble with physics properties
+  const generateBubble = useCallback(() => {
     if (availableItems.length === 0) return null;
     
     const randomIndex = Math.floor(Math.random() * availableItems.length);
-    const selectedItem = availableItems[randomIndex];
+    const text = availableItems[randomIndex];
     
     setAvailableItems(prev => prev.filter((_, index) => index !== randomIndex));
     
@@ -59,136 +38,172 @@ const EnhancedClusteringMoods = ({ items, onSelectionComplete, currentCategory }
     
     return {
       id: Date.now() + Math.random(),
+      text,
       x,
       y,
       vx: (Math.random() - 0.5) * 1.5,
       vy: (Math.random() - 0.5) * 1.5,
       size,
       createdAt: Date.now(),
-      category: currentCategory,
-      text: selectedItem.text
+      isFading: false,
+      fadeStartTime: null,
+      isDragging: false
     };
-  }, [availableItems, currentCategory]);
+  }, [availableItems]);
 
-  // Mood generation interval
+  // Generate new bubbles at interval
   useEffect(() => {
+    if (availableItems.length === 0) return;
+
     const interval = setInterval(() => {
-      if (moods.length < MOOD_LIMIT && availableItems.length > 0) {
-        const newMood = generateMoodPhysics();
-        if (newMood) {
-          setMoods(prev => [...prev, newMood]);
-        }
+      const newBubble = generateBubble();
+      if (newBubble) {
+        setActiveItems(prev => [...prev, newBubble]);
       }
     }, MOOD_GENERATION_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [moods.length, availableItems.length, generateMoodPhysics]);
+  }, [availableItems.length, generateBubble]);
 
-  // Mood cleanup interval
+  // Process completed bubbles
+  const processBubbleCompletion = useCallback((completedItems, wasSelected) => {
+    const processedBubbles = completedItems.map(item => ({
+      item: item.text,
+      wasSelected,
+      category,
+      header,
+      isPositive: category === 'needs' ? null : category === 'positive'
+    }));
+
+    onBubblesFate(processedBubbles);
+  }, [category, header, onBubblesFate]);
+
+  // Handle bubble lifecycle and physics
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
-      setMoods(prev => {
-        const expiredMoods = prev.filter(mood => (now - mood.createdAt) >= MOOD_LIFETIME);
-        setAvailableItems(prevItems => [
-          ...prevItems,
-          ...expiredMoods.map(mood => ({ text: mood.text, category: mood.category }))
-        ]);
-        return prev.filter(mood => (now - mood.createdAt) < MOOD_LIFETIME);
+      let completedItems = [];
+      
+      setActiveItems(prev => {
+        const updatedItems = prev.map(item => {
+          if (item.isDragging) return item;
+
+          // Start fade if lifetime reached
+          if (!item.isFading && (now - item.createdAt >= BUBBLE_LIFETIME)) {
+            return { ...item, isFading: true, fadeStartTime: now };
+          }
+
+          // Complete fade and mark for processing
+          if (item.isFading && (now - item.fadeStartTime >= FADE_DURATION)) {
+            if (!processingItems.has(item.id)) {
+              completedItems.push(item);
+              setProcessingItems(prev => new Set([...prev, item.id]));
+            }
+            return null;
+          }
+
+          // Update physics
+          let newVx = item.vx * 0.95;
+          let newVy = item.vy * 0.95;
+          let newX = item.x + newVx;
+          let newY = item.y + newVy;
+          
+          const padding = item.size / 2;
+          if (newX < padding || newX > window.innerWidth - padding) {
+            newVx *= -0.8;
+            newX = Math.max(padding, Math.min(newX, window.innerWidth - padding));
+          }
+          if (newY < padding || newY > window.innerHeight - padding) {
+            newVy *= -0.8;
+            newY = Math.max(padding, Math.min(newY, window.innerHeight - padding));
+          }
+          
+          return { ...item, x: newX, y: newY, vx: newVx, vy: newVy };
+        });
+
+        return updatedItems.filter(Boolean);
       });
-    }, 1000);
+
+      if (completedItems.length > 0) {
+        processBubbleCompletion(completedItems, false);
+      }
+    }, ANIMATION_INTERVAL);
 
     return () => clearInterval(interval);
-  }, []);
-
-  // Physics update interval
-  const updatePositions = useCallback(() => {
-    setMoods(prevMoods => 
-      prevMoods.map(mood => {
-        if (mood.isDragging) return mood;
-
-        let newVx = mood.vx * 0.95;
-        let newVy = mood.vy * 0.95;
-        let newX = mood.x + newVx;
-        let newY = mood.y + newVy;
-        
-        const padding = mood.size / 2;
-        if (newX < padding || newX > window.innerWidth - padding) {
-          newVx *= -0.8;
-          newX = Math.max(padding, Math.min(newX, window.innerWidth - padding));
-        }
-        if (newY < padding || newY > window.innerHeight - padding) {
-          newVy *= -0.8;
-          newY = Math.max(padding, Math.min(newY, window.innerHeight - padding));
-        }
-        
-        return { ...mood, x: newX, y: newY, vx: newVx, vy: newVy };
-      })
-    );
-  }, []);
-
-  useEffect(() => {
-    const interval = setInterval(updatePositions, ANIMATION_INTERVAL);
-    return () => clearInterval(interval);
-  }, [updatePositions]);
+  }, [processBubbleCompletion]);
 
   // Mouse event handlers
-  const handleMouseDown = useCallback((e, mood) => {
-    setDraggedMood(mood);
+  const handleMouseDown = useCallback((e, item) => {
+    setDraggedItem(item);
     setDragStart({ x: e.clientX, y: e.clientY });
   }, []);
 
   const handleMouseMove = useCallback((e) => {
-    if (!draggedMood || !dragStart) return;
+    if (!draggedItem || !dragStart) return;
     
     const dx = e.clientX - dragStart.x;
     const dy = e.clientY - dragStart.y;
     
-    setMoods(prev => prev.map(mood =>
-      mood.id === draggedMood.id
+    setActiveItems(prev => prev.map(item =>
+      item.id === draggedItem.id
         ? { 
-            ...mood, 
-            x: mood.x + dx,
-            y: mood.y + dy,
+            ...item, 
+            x: item.x + dx,
+            y: item.y + dy,
             isDragging: true,
             vx: 0,
             vy: 0
           }
-        : mood
+        : item
     ));
     setDragStart({ x: e.clientX, y: e.clientY });
 
-    // Check if mood is dragged to edge of screen
+    // Handle edge drag
     const edgeThreshold = 100;
     if (e.clientX < edgeThreshold || e.clientX > window.innerWidth - edgeThreshold ||
         e.clientY < edgeThreshold || e.clientY > window.innerHeight - edgeThreshold) {
-      setMoods(prev => prev.filter(m => m.id !== draggedMood.id));
-      setAvailableItems(prev => [...prev, { text: draggedMood.text, category: draggedMood.category }]);
-      setDraggedMood(null);
+      setActiveItems(prev => {
+        const removedItem = prev.find(i => i.id === draggedItem.id);
+        if (removedItem && !processingItems.has(removedItem.id)) {
+          processBubbleCompletion([removedItem], false);
+          setProcessingItems(prev => new Set([...prev, removedItem.id]));
+        }
+        return prev.filter(i => i.id !== draggedItem.id);
+      });
+      setDraggedItem(null);
       setDragStart(null);
     }
-  }, [draggedMood, dragStart]);
+  }, [draggedItem, dragStart, processBubbleCompletion]);
 
   const handleMouseUp = useCallback((e) => {
-    if (!draggedMood || !dragStart) return;
+    if (!draggedItem || !dragStart) return;
 
     const dx = e.clientX - dragStart.x;
     const dy = e.clientY - dragStart.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    if (distance < 5) {
-      setSelectedMood(draggedMood);
-      setIsSelectionVisible(true);
-      setMoods(prev => prev.filter(m => m.id !== draggedMood.id));
+    if (distance < 5 && !processingItems.has(draggedItem.id)) {
+      // Clicked (not dragged) - mark as selected
+      processBubbleCompletion([draggedItem], true);
+      setProcessingItems(prev => new Set([...prev, draggedItem.id]));
+      setActiveItems(prev => prev.filter(i => i.id !== draggedItem.id));
     } else {
-      setMoods(prev => prev.map(m => 
-        m.id === draggedMood.id ? { ...m, isDragging: false } : m
+      // Reset physics after drag
+      setActiveItems(prev => prev.map(item =>
+        item.id === draggedItem.id
+          ? {
+              ...item,
+              isDragging: false,
+              vx: (Math.random() - 0.5) * 1.5,
+              vy: (Math.random() - 0.5) * 1.5
+            }
+          : item
       ));
     }
 
-    setDraggedMood(null);
+    setDraggedItem(null);
     setDragStart(null);
-  }, [draggedMood, dragStart]);
+  }, [draggedItem, dragStart, processBubbleCompletion]);
 
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove);
@@ -201,24 +216,20 @@ const EnhancedClusteringMoods = ({ items, onSelectionComplete, currentCategory }
 
   return (
     <div className="mood-container">
-      {moods.map((mood) => (
+      {activeItems.map((item) => (
         <MoodButton
-          key={mood.id}
-          mood={mood}
-          isDragging={mood.isDragging}
-          isDragged={draggedMood?.id === mood.id}
-          onMouseDown={handleMouseDown}
+          key={item.id}
+          mood={item}
+          style={{
+            left: item.x,
+            top: item.y,
+            opacity: item.isFading 
+              ? 1 - ((Date.now() - item.fadeStartTime) / FADE_DURATION)
+              : 1
+          }}
+          onMouseDown={(e) => handleMouseDown(e, item)}
         />
       ))}
-
-      {selectedMood && (
-        <SelectionPanel
-          isVisible={isSelectionVisible}
-          selectedMood={selectedMood}
-          onToggleVisibility={() => setIsSelectionVisible(!isSelectionVisible)}
-          onComplete={onSelectionComplete}
-        />
-      )}
     </div>
   );
 };
