@@ -5,6 +5,8 @@ const MOOD_GENERATION_INTERVAL = 2000;  // 2 seconds between bubbles
 const BUBBLE_LIFETIME = 5000;           // 5 seconds lifetime
 const FADE_DURATION = 1000;             // 1 second fade
 const ANIMATION_INTERVAL = 50;          // 50ms physics updates
+const CONTAINER_WIDTH_PERCENT = 50;     // Container width as percentage of window
+const MARGIN = 100;                     // Safe margin in pixels
 
 const EnhancedClusteringMoods = ({ items, category, header, onBubblesFate }) => {
   const [activeItems, setActiveItems] = useState([]);
@@ -13,6 +15,34 @@ const EnhancedClusteringMoods = ({ items, category, header, onBubblesFate }) => 
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragStart, setDragStart] = useState(null);
   const [itemsToProcess, setItemsToProcess] = useState([]);
+  const [containerDimensions, setContainerDimensions] = useState({
+    width: 0,
+    left: 0,
+    effectiveWidth: 0,
+    effectiveLeft: 0
+  });
+
+  // Initialize container dimensions
+  const updateContainerDimensions = useCallback(() => {
+    const containerWidth = window.innerWidth * (CONTAINER_WIDTH_PERCENT / 100);
+    const containerLeft = (window.innerWidth - containerWidth) / 2;
+    const effectiveWidth = containerWidth - (2 * MARGIN);
+    const effectiveLeft = containerLeft + MARGIN;
+    
+    setContainerDimensions({
+      width: containerWidth,
+      left: containerLeft,
+      effectiveWidth,
+      effectiveLeft
+    });
+  }, []);
+
+  // Update dimensions on window resize
+  useEffect(() => {
+    updateContainerDimensions();
+    window.addEventListener('resize', updateContainerDimensions);
+    return () => window.removeEventListener('resize', updateContainerDimensions);
+  }, [updateContainerDimensions]);
 
   // Initialize available items when props change
   useEffect(() => {
@@ -23,7 +53,7 @@ const EnhancedClusteringMoods = ({ items, category, header, onBubblesFate }) => 
     }
   }, [items]);
 
-  // Generate new bubble
+  // Generate new bubble with proper bounds
   const generateBubble = useCallback(() => {
     if (availableItems.length === 0) return null;
     
@@ -32,20 +62,29 @@ const EnhancedClusteringMoods = ({ items, category, header, onBubblesFate }) => 
     
     setAvailableItems(prev => prev.filter((_, index) => index !== randomIndex));
     
+    // Calculate bubble size first
+    const size = Math.random() * 20 + 80; // Base size between 80-100px
+    const radius = size / 2;
+
+    // Generate position within effective bounds
+    const x = containerDimensions.effectiveLeft + radius + 
+             Math.random() * (containerDimensions.effectiveWidth - size);
+    const y = Math.random() * (window.innerHeight - 160) + 80;
+    
     return {
       id: Date.now() + Math.random(),
       text,
-      x: Math.random() * (window.innerWidth - 160) + 80,
-      y: Math.random() * (window.innerHeight - 160) + 80,
+      x,
+      y,
       vx: (Math.random() - 0.5) * 1.5,
       vy: (Math.random() - 0.5) * 1.5,
-      size: Math.random() * 20 + 80,
+      size,
       createdAt: Date.now(),
       isFading: false,
       fadeStartTime: null,
       isDragging: false
     };
-  }, [availableItems]);
+  }, [availableItems, containerDimensions]);
 
   // Bubble generation interval
   useEffect(() => {
@@ -74,7 +113,7 @@ const EnhancedClusteringMoods = ({ items, category, header, onBubblesFate }) => 
     onBubblesFate(processedBubbles);
   }, [category, header, onBubblesFate]);
 
-  // Physics and lifecycle effect
+  // Handle physics updates and bubble lifecycle
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -97,22 +136,30 @@ const EnhancedClusteringMoods = ({ items, category, header, onBubblesFate }) => 
             return null;
           }
 
-          // Update physics
+          // Update physics with boundary checking
+          const radius = item.size / 2;
           let newVx = item.vx * 0.95;
           let newVy = item.vy * 0.95;
           let newX = item.x + newVx;
           let newY = item.y + newVy;
+
+          // Boundary checks
+          const leftBound = containerDimensions.effectiveLeft + radius;
+          const rightBound = containerDimensions.effectiveLeft + containerDimensions.effectiveWidth - radius;
           
-          const padding = item.size / 2;
-          if (newX < padding || newX > window.innerWidth - padding) {
+          if (newX < leftBound || newX > rightBound) {
             newVx *= -0.8;
-            newX = Math.max(padding, Math.min(newX, window.innerWidth - padding));
+            newX = Math.max(leftBound, Math.min(newX, rightBound));
           }
-          if (newY < padding || newY > window.innerHeight - padding) {
-            newVy *= -0.8;
-            newY = Math.max(padding, Math.min(newY, window.innerHeight - padding));
-          }
+
+          const topBound = radius;
+          const bottomBound = window.innerHeight - radius;
           
+          if (newY < topBound || newY > bottomBound) {
+            newVy *= -0.8;
+            newY = Math.max(topBound, Math.min(newY, bottomBound));
+          }
+
           return { ...item, x: newX, y: newY, vx: newVx, vy: newVy };
         });
 
@@ -121,14 +168,12 @@ const EnhancedClusteringMoods = ({ items, category, header, onBubblesFate }) => 
     }, ANIMATION_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [processBubbleCompletion]);
+  }, [containerDimensions, processingItems]);
 
   // Handle processing of completed items
   useEffect(() => {
     if (itemsToProcess.length > 0) {
-      // Deduplicate items by text value
       const uniqueItems = itemsToProcess.reduce((acc, item) => {
-        // Only keep the first occurrence of each text value
         if (!acc.some(existingItem => existingItem.text === item.text)) {
           acc.push(item);
         }
@@ -141,7 +186,6 @@ const EnhancedClusteringMoods = ({ items, category, header, onBubblesFate }) => 
       if (timeoutItems.length > 0) {
         processBubbleCompletion(timeoutItems, false);
       }
-      
       if (selectedItems.length > 0) {
         processBubbleCompletion(selectedItems, true);
       }
@@ -150,6 +194,7 @@ const EnhancedClusteringMoods = ({ items, category, header, onBubblesFate }) => 
     }
   }, [itemsToProcess, processBubbleCompletion]);
 
+  // Mouse event handlers
   const handleMouseDown = useCallback((e, item) => {
     setDraggedItem(item);
     setDragStart({ x: e.clientX, y: e.clientY });
@@ -213,6 +258,7 @@ const EnhancedClusteringMoods = ({ items, category, header, onBubblesFate }) => 
     setDragStart(null);
   }, [draggedItem, dragStart]);
 
+  // Global mouse event listeners
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
@@ -223,7 +269,13 @@ const EnhancedClusteringMoods = ({ items, category, header, onBubblesFate }) => 
   }, [handleMouseMove, handleMouseUp]);
 
   return (
-    <div className="mood-container">
+    <div 
+      style={{ 
+        position: 'fixed',
+        inset: 0,
+        overflow: 'hidden'
+      }}
+    >
       {activeItems.map((item) => (
         <MoodButton
           key={item.id}
