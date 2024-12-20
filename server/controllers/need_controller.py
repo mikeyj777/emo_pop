@@ -41,7 +41,7 @@ def get_needs(user_id):
     except Exception as e:
         return jsonify({"error": "Internal server error"}), 500
 
-def create_need(user_id):
+def log_need(user_id):
     data = request.get_json()
     needs = data['needs']
     try:

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import EnhancedClusteringMoods from "./EnhancedClusteringMoods";
 import StageHeader from "./StageHeader";
-import { loadEmotions, loadNeeds } from "../utils/getData";
+import { loadEmotions, loadNeeds, storeEmotions, storeNeeds } from "../utils/handleData";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL;
 
@@ -36,6 +36,41 @@ const MainController = () => {
 
         fetchData();
     }, []);
+
+    // Add new function to process and store selected items
+    const processAndStoreSelectedItems = async () => {
+      try {
+          // Group items by category
+          const emotionsPositive = selectedItems
+              .filter(item => item.category === 'positive' && item.wasSelected)
+              .map(item => item.item);
+              
+          const emotionsNegative = selectedItems
+              .filter(item => item.category === 'negative' && item.wasSelected)
+              .map(item => item.item);
+              
+          const needs = selectedItems
+              .filter(item => item.category === 'needs' && item.wasSelected)
+              .map(item => item.item);
+
+          // Store emotions if any exist
+          if (emotionsPositive.length > 0) {
+              await storeEmotions(API_BASE_URL, userId, emotionsPositive, 'positive');
+          }
+          
+          if (emotionsNegative.length > 0) {
+              await storeEmotions(API_BASE_URL, userId, emotionsNegative, 'negative');
+          }
+
+          // Store needs if any exist
+          if (needs.length > 0) {
+              await storeNeeds(API_BASE_URL, userId, needs);
+          }
+
+      } catch (error) {
+          setError(`Error storing data: ${error.message}`);
+      }
+  };
 
     // Process data when emotions or needs change, or when category changes
     useEffect(() => {
@@ -111,7 +146,14 @@ const MainController = () => {
                     setCurrentHeaderIndex(0);
                     break;
                 case 'needs':
-                    navigate(`/summary/${userId}`);
+                    // Process and store all selected items before navigating
+                    processAndStoreSelectedItems()
+                        .then(() => {
+                            navigate(`/summary/${userId}`);
+                        })
+                        .catch(error => {
+                            setError(`Error storing data: ${error.message}`);
+                        });
                     break;
             }
             return;
@@ -125,7 +167,18 @@ const MainController = () => {
 
     // Handle completed bubbles
     const handleBubblesFate = (processedBubbles) => {
-        // Add selected items to cumulative array
+      /* 
+        processedBubbles data structure:
+          const processedBubbles = completedItems.map(item => ({
+            item: item.text,
+            wasSelected,
+            category,
+            header,
+            isPositive: category === 'needs' ? null : category === 'positive'
+          }));
+      */
+      
+      // Add selected items to cumulative array
         const newSelected = processedBubbles.filter(item => item.wasSelected);
         setSelectedItems(prev => [...prev, ...newSelected]);
         
