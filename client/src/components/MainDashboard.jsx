@@ -1,18 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import './Dashboard.css';
+import { useParams, useNavigate } from 'react-router-dom';
+import CircleProgress from './ui/CircleProgress';
 
-const CustomDashboard = ({ userId }) => {
+const API_BASE_URL = process.env.REACT_APP_API_URL;
+
+const MainDashboard = () => {
+  const { userId } = useParams();
+  const navigate = useNavigate();
   const [emotions, setEmotions] = useState([]);
   const [needs, setNeeds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [emotionsRes, needsRes] = await Promise.all([
-          fetch(`/api/emotions/${userId}?days=7`),
-          fetch(`/api/needs/${userId}?days=7`)
+          fetch(`${API_BASE_URL}/api/emotions/${userId}?days=7`),
+          fetch(`${API_BASE_URL}/api/needs/${userId}?days=7`)
         ]);
 
         if (!emotionsRes.ok || !needsRes.ok) {
@@ -63,54 +69,6 @@ const CustomDashboard = ({ userId }) => {
       positiveRatio,
       needsMetRatio
     };
-  };
-
-  const CircleProgress = ({ value, color, label }) => {
-    const radius = 45;
-    const circumference = radius * 2 * Math.PI;
-    const offset = circumference - (value / 100) * circumference;
-    
-    return (
-      <div className="circle-progress">
-        <svg viewBox="0 0 120 120">
-          <circle 
-            className="circle-bg"
-            cx="60" 
-            cy="60" 
-            r={radius}
-          />
-          <circle 
-            className="circle-progress-bar"
-            cx="60" 
-            cy="60" 
-            r={radius}
-            style={{
-              strokeDasharray: circumference,
-              strokeDashoffset: offset,
-              stroke: color
-            }}
-          />
-          <text 
-            x="60" 
-            y="60" 
-            className="circle-text"
-            dominantBaseline="middle"
-            textAnchor="middle"
-          >
-            {value}%
-          </text>
-          <text 
-            x="60" 
-            y="80" 
-            className="circle-label"
-            dominantBaseline="middle"
-            textAnchor="middle"
-          >
-            {label}
-          </text>
-        </svg>
-      </div>
-    );
   };
 
   if (loading) return <div className="dashboard-loading">Loading...</div>;
@@ -269,4 +227,4 @@ const CustomDashboard = ({ userId }) => {
   );
 };
 
-export default CustomDashboard;
+export default MainDashboard;
