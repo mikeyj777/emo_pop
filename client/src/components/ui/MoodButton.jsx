@@ -1,18 +1,19 @@
 import React from 'react';
 
-const MoodButton = ({ mood, isDragging, isDragged, onMouseDown }) => {
+const MoodButton = ({ mood, category, style, onMouseDown }) => {
+  // Get a color variable based on mood category
+  
   return (
     <div
-      id={`mood-${mood.id}`}
-      className={`mood-button ${isDragging ? 'dragging' : ''} ${isDragged ? 'dragged' : ''}`}
+      className={`mood-button ${category}`}
       style={{
-        transform: `translate(${mood.x}px, ${mood.y}px)`,
-        width: `${mood.size}px`,
-        height: `${mood.size}px`,
+        ...style,
+        backgroundColor: mood.bgColor,
+        transform: mood.isDragging ? 'translate(-50%, -50%) scale(1.1)' : 'translate(-50%, -50%)',
       }}
-      onMouseDown={(e) => onMouseDown(e, mood)}
+      onMouseDown={onMouseDown}
     >
-      <span className="mood-text">{mood.text}</span>
+      {mood.text}
     </div>
   );
 };

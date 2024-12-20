@@ -22,6 +22,25 @@ const EnhancedClusteringMoods = ({ items, category, header, onBubblesFate }) => 
     effectiveLeft: 0
   });
 
+  const getRandomColorVar = (category) => {
+    const randomNum = Math.floor(Math.random() * 5) + 1;
+    return `var(--${category}-${randomNum})`;
+  };
+
+  // Set the background color based on the category
+  const getBgColor = () => {
+    switch (category) {
+      case 'positive':
+        return getRandomColorVar('positive');
+      case 'negative':
+        return getRandomColorVar('negative');
+      case 'needs':
+        return getRandomColorVar('needs');
+      default:
+        return 'var(--needs-1)';
+    }
+  };
+
   // Initialize container dimensions
   const updateContainerDimensions = useCallback(() => {
     const containerWidth = window.innerWidth * (CONTAINER_WIDTH_PERCENT / 100);
@@ -53,38 +72,38 @@ const EnhancedClusteringMoods = ({ items, category, header, onBubblesFate }) => 
     }
   }, [items]);
 
-  // Generate new bubble with proper bounds
-  const generateBubble = useCallback(() => {
-    if (availableItems.length === 0) return null;
-    
-    const randomIndex = Math.floor(Math.random() * availableItems.length);
-    const text = availableItems[randomIndex];
-    
-    setAvailableItems(prev => prev.filter((_, index) => index !== randomIndex));
-    
-    // Calculate bubble size first
-    const size = Math.random() * 20 + 80; // Base size between 80-100px
-    const radius = size / 2;
-
-    // Generate position within effective bounds
-    const x = containerDimensions.effectiveLeft + radius + 
-             Math.random() * (containerDimensions.effectiveWidth - size);
-    const y = Math.random() * (window.innerHeight - 160) + 80;
-    
-    return {
-      id: Date.now() + Math.random(),
-      text,
-      x,
-      y,
-      vx: (Math.random() - 0.5) * 1.5,
-      vy: (Math.random() - 0.5) * 1.5,
-      size,
-      createdAt: Date.now(),
-      isFading: false,
-      fadeStartTime: null,
-      isDragging: false
-    };
-  }, [availableItems, containerDimensions]);
+ // In the generateBubble function, add category to the bubble object
+const generateBubble = useCallback(() => {
+  if (availableItems.length === 0) return null;
+  
+  const randomIndex = Math.floor(Math.random() * availableItems.length);
+  const text = availableItems[randomIndex];
+  
+  setAvailableItems(prev => prev.filter((_, index) => index !== randomIndex));
+  
+  const size = Math.random() * 20 + 80;
+  const radius = size / 2;
+  
+  const x = containerDimensions.effectiveLeft + radius + 
+           Math.random() * (containerDimensions.effectiveWidth - size);
+  const y = Math.random() * (window.innerHeight - 160) + 80;
+  const bgColor = getBgColor();
+  
+  return {
+    id: Date.now() + Math.random(),
+    text,
+    bgColor, // Add the category here
+    x,
+    y,
+    vx: (Math.random() - 0.5) * 1.5,
+    vy: (Math.random() - 0.5) * 1.5,
+    size,
+    createdAt: Date.now(),
+    isFading: false,
+    fadeStartTime: null,
+    isDragging: false
+  };
+}, [availableItems, containerDimensions, category]); 
 
   // Bubble generation interval
   useEffect(() => {
@@ -280,6 +299,7 @@ const EnhancedClusteringMoods = ({ items, category, header, onBubblesFate }) => 
         <MoodButton
           key={item.id}
           mood={item}
+          category={category}
           style={{
             left: item.x,
             top: item.y,

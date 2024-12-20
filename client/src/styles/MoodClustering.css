@@ -5,6 +5,35 @@
   box-sizing: border-box;
 }
 
+/* Color Schemes */
+:root {
+  /* Positive emotion colors - cool, uplifting tones */
+  --positive-1: rgba(64, 224, 208, 0.3);  /* Turquoise */
+  --positive-2: rgba(135, 206, 250, 0.3); /* Sky Blue */
+  --positive-3: rgba(147, 112, 219, 0.3); /* Purple */
+  --positive-4: rgba(72, 209, 204, 0.3);  /* Medium Turquoise */
+  --positive-5: rgba(100, 149, 237, 0.3); /* Cornflower Blue */
+
+  /* Negative emotion colors - deep, intense tones */
+  --negative-1: rgba(139, 0, 0, 0.3);     /* Dark Red */
+  --negative-2: rgba(128, 0, 128, 0.3);   /* Purple */
+  --negative-3: rgba(75, 0, 130, 0.3);    /* Indigo */
+  --negative-4: rgba(153, 50, 204, 0.3);  /* Dark Orchid */
+  --negative-5: rgba(148, 0, 211, 0.3);   /* Dark Violet */
+
+  /* Needs colors - warm, neutral tones */
+  --needs-1: rgba(255, 223, 186, 0.3);    /* Peach */
+  --needs-2: rgba(255, 228, 181, 0.3);    /* Moccasin */
+  --needs-3: rgba(255, 218, 185, 0.3);    /* Peach Puff */
+  --needs-4: rgba(255, 222, 173, 0.3);    /* Navajo White */
+  --needs-5: rgba(245, 222, 179, 0.3);    /* Wheat */
+
+  /* Text colors for contrast */
+  --text-on-positive: rgba(255, 255, 255, 0.95);
+  --text-on-negative: rgba(255, 255, 255, 0.95);
+  --text-on-needs: rgba(0, 0, 0, 0.85);
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: rgba(255, 255, 255, 0.9);
@@ -29,11 +58,9 @@ body {
   padding: 16px;
   width: var(--size, 100px);
   height: var(--size, 100px);
-  background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   backdrop-filter: blur(8px);
-  color: rgba(255, 255, 255, 0.9);
   transition: all 0.5s ease;
   cursor: pointer;
   display: flex;
@@ -48,11 +75,39 @@ body {
   overflow: hidden;
 }
 
+/* Category-specific styles */
+.mood-button.positive {
+  background: var(--positive-1);
+  color: var(--text-on-positive);
+}
+
+.mood-button.negative {
+  background: var(--negative-1);
+  color: var(--text-on-negative);
+}
+
+.mood-button.needs {
+  background: var(--needs-1);
+  color: var(--text-on-needs);
+}
+
+/* Hover states */
 .mood-button:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
   transform: translate(-50%, -50%) scale(1.05);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.mood-button.positive:hover {
+  background: var(--positive-1);
+}
+
+.mood-button.negative:hover {
+  background: var(--negative-1);
+}
+
+.mood-button.needs:hover {
+  background: var(--needs-1);
 }
 
 .mood-button.dragging {

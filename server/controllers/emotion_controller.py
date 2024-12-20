@@ -8,6 +8,7 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 
 def get_emotions(user_id):
     days = request.args.get('days', 7)
+    logging.debug(f"getting emotions for user {user_id} over {days} days")
     try:
         conn = get_db_connection()
         cur = conn.cursor()

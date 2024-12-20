@@ -21,7 +21,7 @@ function Login() {
       const userId = res.data.userId;
       console.info("retrieved user id " + userId);
       localStorage.setItem('userId', userId);
-      navigate(`/controller/${userId}`);
+      navigate(`/dashboard/${userId}`);
     } catch (err) {
       console.error(err);
     }
