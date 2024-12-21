@@ -42,7 +42,7 @@ def get_emotions(user_id):
     except Exception as e:
         return jsonify({"error": "Internal server error"}), 500
 
-def log_emotion(user_id):
+def log_emotions(user_id):
     data = request.get_json()
     emotions = data['emotions']
     emotion_type = data['type']

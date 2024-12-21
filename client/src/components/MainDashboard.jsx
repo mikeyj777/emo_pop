@@ -49,7 +49,8 @@ const MainDashboard = () => {
     // Calculate totals
     const totalPositive = sortedEmotions.reduce((sum, day) => sum + day.positiveCount, 0);
     const totalNegative = sortedEmotions.reduce((sum, day) => sum + day.negativeCount, 0);
-    const totalPops = totalPositive + totalNegative;
+    const totalNeeds = needs.reduce((sum, day) => sum + day.needs, 0);
+    const totalPops = totalPositive + totalNegative + totalNeeds;
     const positiveRatio = totalPops ? Math.round((totalPositive / totalPops) * 100) : 0;
     
     // Calculate streak with sorted data
@@ -154,7 +155,7 @@ const MainDashboard = () => {
                     <span className="activity-value">{total}</span>
                   </div>
                   <span className="activity-label">
-                    {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                    {new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })}
                   </span>
                 </div>
               );
@@ -218,7 +219,7 @@ const MainDashboard = () => {
                     )}
                   </div>
                   <span className="activity-label">
-                    {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                    {new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })}
                   </span>
                 </div>
               );
