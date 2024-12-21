@@ -31,7 +31,7 @@
   /* Text colors for contrast */
   --text-on-positive: rgba(255, 255, 255, 0.95);
   --text-on-negative: rgba(255, 255, 255, 0.95);
-  --text-on-needs: rgba(0, 0, 0, 0.85);
+  --text-on-needs: rgba(70, 36, 70, 0.85);
 }
 
 body {

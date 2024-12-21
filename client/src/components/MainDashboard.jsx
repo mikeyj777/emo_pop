@@ -212,8 +212,12 @@ const MainDashboard = () => {
         </div>
       </div>
       
-      <button className="journey-button">
-        Click here to Start your Journey
+      {/* After your stats grid */}
+      <button 
+        className="journey-button"
+        onClick={() => navigate(`/controller/${userId}`)}
+      >
+        Your Journey Starts Here
       </button>
 
       {/* Legend */}

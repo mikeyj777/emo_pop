@@ -156,7 +156,7 @@ const MainController = () => {
                             setCurrentHeaderIndex(0);
                             break;
                         case 'needs':
-                            navigate(`/summary/${userId}`);
+                            navigate(`/dashboard/${userId}`);
                             break;
                     }
                 } catch (error) {
