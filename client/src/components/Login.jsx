@@ -15,11 +15,8 @@ function Login() {
         return;
       }
       const trimmedName = name.trim().toLowerCase();
-      console.info("logging in. url is " + API_BASE_URL);
-      console.info("full url as interpreted by react is " + `${API_BASE_URL}/api/users`);
       const res = await axios.post(`${API_BASE_URL}/api/users`, { name: trimmedName });
       const userId = res.data.userId;
-      console.info("retrieved user id " + userId);
       localStorage.setItem('userId', userId);
       navigate(`/dashboard/${userId}`);
     } catch (err) {

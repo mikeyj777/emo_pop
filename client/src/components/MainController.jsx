@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import EnhancedClusteringMoods from "./EnhancedClusteringMoods";
-import StageHeader from "./StageHeader";
-import WindowDimensionsPopup from "./ui/WindowDimensionsPopup";
+import StageHeader from "./ui/StageHeader";
 import { loadEmotions, loadNeeds, storeEmotions, storeNeeds } from "../utils/handleData";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL;
@@ -225,8 +224,7 @@ const MainController = () => {
 
     return (
         <div className="mood-container">
-            {/* <WindowDimensionsPopup /> */}
-
+            
             <StageHeader 
                 currentCategory={currentCategory} 
                 currentHeader={getHeaderText()}

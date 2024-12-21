@@ -5,7 +5,6 @@ import EnhancedClusteringMoods from './components/EnhancedClusteringMoods';
 import Login from './components/Login';
 import MainDashboard from './components/MainDashboard';
 import MainController from './components/MainController';
-import BoundsTest from './components/ui/BoundsTest';
 import './App.css';
 import './styles/global.css';
 
@@ -19,7 +18,6 @@ const App = () => {
           <Route path="/dashboard/:userId" element={<MainDashboard />} />
           <Route path="/controller/:userId" element={<MainController />} />
           <Route path="/clustering" element={<EnhancedClusteringMoods />} />
-          <Route path="/bounds" element={<BoundsTest />} />
         </Routes>
       </div>
     </Router>
