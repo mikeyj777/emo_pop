@@ -41,34 +41,49 @@ const MainDashboard = () => {
   }, [userId]);
 
   const calculateStats = () => {
-    const totalPositive = emotions.reduce((sum, day) => sum + day.positiveCount, 0);
-    const totalNegative = emotions.reduce((sum, day) => sum + day.negativeCount, 0);
+    // Sort emotions by date in descending order
+    const sortedEmotions = [...emotions].sort((a, b) => 
+        new Date(b.date) - new Date(a.date)
+    );
+    
+    // Calculate totals
+    const totalPositive = sortedEmotions.reduce((sum, day) => sum + day.positiveCount, 0);
+    const totalNegative = sortedEmotions.reduce((sum, day) => sum + day.negativeCount, 0);
     const totalPops = totalPositive + totalNegative;
     const positiveRatio = totalPops ? Math.round((totalPositive / totalPops) * 100) : 0;
     
-    // Calculate streak
+    // Calculate streak with sorted data
     let streak = 0;
     const today = new Date().toISOString().split('T')[0];
-    for (const day of emotions) {
-      if (day.date === today || streak > 0) {
-        if (day.positiveCount > 0 || day.negativeCount > 0) {
-          streak++;
-        } else {
-          break;
-        }
+    
+  const isWithinOneDay = (dateStr1, dateStr2) => {
+          const date1 = new Date(dateStr1);
+          const date2 = new Date(dateStr2);
+          const diffTime = Math.abs(date2 - date1);
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          return diffDays <= 1;
+      };
+
+      for (const day of sortedEmotions) {
+          if (isWithinOneDay(day.date, today) || streak > 0) {
+              if (day.positiveCount > 0 || day.negativeCount > 0) {
+                  streak++;
+              } else {
+                  break;
+              }
+          }
       }
-    }
-
-    // Calculate needs met ratio
-    const daysWithNeeds = needs.filter(day => day.needs > 0).length;
-    const needsMetRatio = needs.length ? Math.round((daysWithNeeds / needs.length) * 100) : 0;
-
-    return {
-      streak,
-      totalPops,
-      positiveRatio,
-      needsMetRatio
-    };
+      
+      // Calculate needs met ratio
+      const daysWithNeeds = needs.filter(day => day.needs > 0).length;
+      const needsMetRatio = needs.length ? Math.round((daysWithNeeds / needs.length) * 100) : 0;
+      
+      return {
+          streak,
+          totalPops,
+          positiveRatio,
+          needsMetRatio
+      };
   };
 
   if (loading) return <div className="dashboard-loading">Loading...</div>;
@@ -91,7 +106,7 @@ const MainDashboard = () => {
         {/* Total Pops */}
         <div className="stat-card wide">
           <div className="stat-content">
-            <div className="stat-label">Total Pops</div>
+            <div className="stat-label">All Pops</div>
             <div className="stat-value">{stats.totalPops}</div>
             <div className="stat-sublabel">last 7 days</div>
           </div>
@@ -122,12 +137,19 @@ const MainDashboard = () => {
           <div className="activity-chart">
             {emotions.map((day, index) => {
               const total = day.positiveCount + day.negativeCount;
-              const height = total ? (total / Math.max(...emotions.map(d => d.positiveCount + d.negativeCount))) * 100 : 0;
+              // If we only have one day, use a reasonable scale (e.g., out of 100)
+              // Otherwise, scale relative to the maximum value across days
+              const maxTotal = emotions.length === 1 ? 100 : Math.max(...emotions.map(d => d.positiveCount + d.negativeCount));
+              const height = total ? (total / maxTotal) * 100 : 0;
+
               return (
                 <div key={day.date} className="activity-bar-container">
                   <div 
                     className="activity-bar"
-                    style={{ height: `${height}%` }}
+                    style={{ 
+                      height: `${height}%`,
+                      minHeight: total > 0 ? '4px' : '0'
+                    }}
                   >
                     <span className="activity-value">{total}</span>
                   </div>
@@ -163,31 +185,44 @@ const MainDashboard = () => {
         <div className="chart-card">
           <h3>Weekly Overview</h3>
           <div className="weekly-chart">
-            {emotions.map((day, index) => (
-              <div key={day.date} className="day-column">
-                <div className="day-bars">
-                  {day.positiveCount > 0 && (
-                    <div 
-                      className="positive-bar"
-                      style={{ height: `${(day.positiveCount / 25) * 100}%` }}
-                    >
-                      <span>{day.positiveCount}</span>
-                    </div>
-                  )}
-                  {day.negativeCount > 0 && (
-                    <div 
-                      className="negative-bar"
-                      style={{ height: `${(day.negativeCount / 25) * 100}%` }}
-                    >
-                      <span>{day.negativeCount}</span>
-                    </div>
-                  )}
+            {emotions.map((day) => {
+              // Find the maximum value between positive and negative counts for proper scaling
+              const maxValue = Math.max(
+                ...emotions.map(d => Math.max(d.positiveCount, d.negativeCount))
+              );
+              
+              return (
+                <div key={day.date} className="day-column">
+                  <div className="day-bars">
+                    {day.positiveCount > 0 && (
+                      <div 
+                        className="positive-bar"
+                        style={{ 
+                          height: `${(day.positiveCount / maxValue) * 100}%`,
+                          minHeight: day.positiveCount > 0 ? '4px' : '0'
+                        }}
+                      >
+                        <span>{day.positiveCount}</span>
+                      </div>
+                    )}
+                    {day.negativeCount > 0 && (
+                      <div 
+                        className="negative-bar"
+                        style={{ 
+                          height: `${(day.negativeCount / maxValue) * 100}%`,
+                          minHeight: day.negativeCount > 0 ? '4px' : '0'
+                        }}
+                      >
+                        <span>{day.negativeCount}</span>
+                      </div>
+                    )}
+                  </div>
+                  <span className="activity-label">
+                    {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                  </span>
                 </div>
-                <span className="day-label">
-                  {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -217,7 +252,7 @@ const MainDashboard = () => {
         className="journey-button"
         onClick={() => navigate(`/controller/${userId}`)}
       >
-        Your Journey Starts Here
+        the Journey Starts Here
       </button>
 
       {/* Legend */}
